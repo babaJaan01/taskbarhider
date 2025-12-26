@@ -17,7 +17,7 @@ Built with [AutoHotkey v2](https://github.com/AutoHotkey/AutoHotkey) (and cursor
 
 ### Requirements
 - Windows 10/11
-- No dependencies required
+- No dependencies required, unless you modify the .ahk files. In that case you need Autohotkey v2.
 
 ### Issues?
 - go to task manager and search for `TaskbarHider.exe` and end the task.
