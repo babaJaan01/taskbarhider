@@ -1,5 +1,7 @@
 ## TaskbarHider v1.0
 
+## I don't know why but Windows Defender Antivirus is marking it as a virus. Will see
+
 Lightweight windows 11 utility that automatically hides the taskbar when no windows are open. nice for screenshots of your wallpaper or just idling.
 
 Built with [AutoHotkey v2](https://github.com/AutoHotkey/AutoHotkey) (and cursor), so a more "efficient" way to do this is definitely possible with WinAPI and C++. 
