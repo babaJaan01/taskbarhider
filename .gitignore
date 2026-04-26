@@ -1,0 +1,23 @@
+# Build output
+native/build/
+native/out/
+dist/
+
+# IDE / editor
+.vs/
+.vscode/
+*.user
+*.suo
+*.sdf
+*.opendb
+.idea/
+CMakeUserPresets.json
+
+# Compiled AHK (we do NOT ship this — it is the false-positive source)
+*.exe
+!native/build/**/*.exe
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

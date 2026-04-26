@@ -1,23 +1,31 @@
 #Requires AutoHotkey v2.0
 
-; Quick script to restore hidden taskbar
+; Emergency taskbar restorer. Double-click this file (or run with AutoHotkey64.exe)
+; if the taskbar is stuck hidden — for example after a TaskbarHider crash.
+;
+; No MsgBox is shown by default so it can be used non-interactively.
+; Pass /quiet to suppress all output (e.g. from scripts).
 
 SW_SHOW := 5
+silent  := false
+for arg in A_Args
+    if (arg = "/quiet" || arg = "--quiet")
+        silent := true
 
-; Show main taskbar
 taskbar := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
 if taskbar
     DllCall("ShowWindow", "Ptr", taskbar, "Int", SW_SHOW)
 
-; Show secondary taskbars (multi-monitor)
-secondaryTaskbar := 0
+secondary := 0
 Loop {
-    secondaryTaskbar := DllCall("FindWindowEx", "Ptr", 0, "Ptr", secondaryTaskbar, 
-                                 "Str", "Shell_SecondaryTrayWnd", "Ptr", 0, "Ptr")
-    if !secondaryTaskbar
+    secondary := DllCall("FindWindowEx", "Ptr", 0, "Ptr", secondary,
+                         "Str", "Shell_SecondaryTrayWnd", "Ptr", 0, "Ptr")
+    if !secondary
         break
-    DllCall("ShowWindow", "Ptr", secondaryTaskbar, "Int", SW_SHOW)
+    DllCall("ShowWindow", "Ptr", secondary, "Int", SW_SHOW)
 }
 
-MsgBox("Taskbar restored!", "Success")
+if !silent
+    TrayTip("Taskbar restored", "TaskbarHider", 0x10)
+
 ExitApp

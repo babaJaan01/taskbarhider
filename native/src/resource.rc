@@ -1,0 +1,47 @@
+#include <winres.h>
+#include "resource.h"
+
+#ifndef TASKBARHIDER_VERSION
+#define TASKBARHIDER_VERSION        1,0,0,0
+#define TASKBARHIDER_VERSION_STR    "1.0.0.0"
+#endif
+
+// Use the system's own shell tray icon so we don't need to ship a .ico file.
+// Replace with `IDI_APP_ICON ICON "app.ico"` + a real .ico if you want a custom icon.
+// (Left intentionally empty — we use LoadIcon(nullptr, IDI_APPLICATION) at runtime.)
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     TASKBARHIDER_VERSION
+ PRODUCTVERSION  TASKBARHIDER_VERSION
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS       VS_FF_DEBUG
+#else
+ FILEFLAGS       0
+#endif
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_APP
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "babaJaan01"
+            VALUE "FileDescription",  "TaskbarHider - auto-hide the Windows taskbar when the desktop is empty"
+            VALUE "FileVersion",      TASKBARHIDER_VERSION_STR
+            VALUE "InternalName",     "TaskbarHider"
+            VALUE "LegalCopyright",   "MIT License"
+            VALUE "OriginalFilename", "TaskbarHider.exe"
+            VALUE "ProductName",      "TaskbarHider"
+            VALUE "ProductVersion",   TASKBARHIDER_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// Manifest: DPI-aware, modern visual styles, no admin required.
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"

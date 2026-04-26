@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 3.20)
+project(TaskbarHider LANGUAGES CXX RC)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+if(NOT WIN32)
+    message(FATAL_ERROR "TaskbarHider is Windows-only.")
+endif()
+
+add_executable(TaskbarHider WIN32
+    src/main.cpp
+    src/resource.rc
+)
+
+target_include_directories(TaskbarHider PRIVATE src)
+
+target_compile_definitions(TaskbarHider PRIVATE
+    UNICODE
+    _UNICODE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+    STRICT
+    _CRT_SECURE_NO_WARNINGS
+)
+
+if(MSVC)
+    target_compile_options(TaskbarHider PRIVATE /W4 /permissive- /Zc:__cplusplus /utf-8)
+    target_compile_options(TaskbarHider PRIVATE
+        $<$<CONFIG:Release>:/O1 /Oy /GL /GR- /EHs-c- /DNDEBUG /guard:cf>
+        $<$<CONFIG:Debug>:/Od /Zi /RTC1>
+    )
+    target_link_options(TaskbarHider PRIVATE
+        $<$<CONFIG:Release>:/LTCG /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /GUARD:CF>
+    )
+
+    # Static CRT -> zero runtime dependencies, no redistributable needed.
+    set_property(TARGET TaskbarHider PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+target_link_libraries(TaskbarHider PRIVATE
+    user32 shell32 dwmapi gdi32 advapi32
+)
+
+set_target_properties(TaskbarHider PROPERTIES
+    OUTPUT_NAME "TaskbarHider"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE        "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG          "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL     "${CMAKE_BINARY_DIR}/bin"
+)

@@ -1,44 +1,46 @@
 ﻿#Requires AutoHotkey v2.0
 #SingleInstance Force
 Persistent
-#NoTrayIcon ; Remove tray icon for minimal footprint (optional - remove this line if you want tray icon)
+#NoTrayIcon
 
 ; ============================================
 ; TaskbarHider - Smart Taskbar Auto-Hide
-; GitHub: https://github.com/babaJaan01/taskbarhider.git
+; GitHub: https://github.com/babaJaan01/taskbarhider
 ; License: MIT
-; 
+;
 ; Behavior:
 ;   - No windows visible → Taskbar hides (hover to reveal)
 ;   - Windows open → Taskbar always visible
+;
+; Emergency exit: Ctrl+Alt+Shift+T (always restores taskbar)
 ; ============================================
 
-; State
 global gTaskbarHidden := false
 global gLastWindowState := true
 global gHoverRevealed := false
 
-; Cache taskbar handles (refreshed periodically)
 global gMainTaskbar := 0
 global gSecondaryTaskbars := []
 
-; Register shell hooks (event-driven)
 gShellHookMsg := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK", "UInt")
 DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
 OnMessage(gShellHookMsg, OnShellMessage)
 
-; Main timer for hover detection + safety checks
+; Restore taskbar on Windows shutdown / logoff so users are never stranded
+OnMessage(0x16, OnEndSession) ; WM_ENDSESSION
+OnMessage(0x11, OnEndSession) ; WM_QUERYENDSESSION
+
 SetTimer(MainLoop, 100)
 
-; Refresh taskbar handles periodically (handles monitor changes)
 RefreshTaskbarHandles()
 SetTimer(RefreshTaskbarHandles, 30000)
 
-; Initial state check
 UpdateTaskbar()
 
-; Cleanup on exit
 OnExit((*) => Cleanup())
+
+; Emergency exit — always restores taskbar, always available
+^!+t::ExitApp()
 
 ; ============================================
 ; CLEANUP
@@ -46,8 +48,13 @@ OnExit((*) => Cleanup())
 Cleanup() {
     SetTimer(MainLoop, 0)
     SetTimer(RefreshTaskbarHandles, 0)
-    DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    try DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
     ShowTaskbar()
+}
+
+OnEndSession(wParam, lParam, msg, hwnd) {
+    ShowTaskbar()
+    return 1
 }
 
 ; ============================================

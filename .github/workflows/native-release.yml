@@ -1,0 +1,150 @@
+name: Native build & release
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-release.yml'
+    tags:
+      - 'v*'
+  pull_request:
+    paths:
+      - 'native/**'
+      - '.github/workflows/native-release.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            cmake_arch: x64
+          - arch: x86
+            cmake_arch: Win32
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S native -B native/build -A ${{ matrix.cmake_arch }}
+
+      - name: Build Release
+        run: cmake --build native/build --config Release --parallel
+
+      - name: Collect artifact
+        run: |
+          $src = "native/build/bin/TaskbarHider.exe"
+          if (-not (Test-Path $src)) { throw "Missing $src" }
+          $dst = "artifact/TaskbarHider-${{ matrix.arch }}.exe"
+          New-Item -ItemType Directory -Force -Path artifact | Out-Null
+          Copy-Item $src $dst -Force
+          Get-Item $dst | Format-List Name, Length, FullName
+          "### ${{ matrix.arch }} build"            | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          ("Size: {0} bytes" -f (Get-Item $dst).Length) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $hash = Get-FileHash $dst -Algorithm SHA256
+          "SHA256: $($hash.Hash)"                   | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskbarHider-${{ matrix.arch }}
+          path: artifact/TaskbarHider-${{ matrix.arch }}.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # OPTIONAL — code sign with Azure Trusted Signing. Uncomment and set
+      # the four secrets below once you have a Trusted Signing account.
+      #
+      # - name: Sign binaries (Azure Trusted Signing)
+      #   uses: azure/trusted-signing-action@v0.5.1
+      #   with:
+      #     azure-tenant-id:     ${{ secrets.AZURE_TENANT_ID }}
+      #     azure-client-id:     ${{ secrets.AZURE_CLIENT_ID }}
+      #     azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      #     endpoint:            ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+      #     trusted-signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+      #     certificate-profile-name:     ${{ secrets.AZURE_SIGNING_PROFILE }}
+      #     files-folder: artifacts
+      #     files-folder-filter: exe
+      #     files-folder-recurse: true
+      #     file-digest: SHA256
+      #     timestamp-rfc3161: http://timestamp.acs.microsoft.com
+      #     timestamp-digest: SHA256
+
+      - name: Assemble release bundle (Tier 1 zip + native exes)
+        run: |
+          $tag = "${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+          # Native binaries
+          Copy-Item artifacts/TaskbarHider-x64/TaskbarHider-x64.exe release/
+          Copy-Item artifacts/TaskbarHider-x86/TaskbarHider-x86.exe release/
+
+          # Tier 1 AHK bundle
+          $ahkFiles = @(
+            'TaskbarHider.ahk', 'RestoreTaskbar.ahk',
+            'install.ps1', 'install.bat',
+            'uninstall.ps1', 'uninstall.bat',
+            'README.md'
+          )
+          Compress-Archive -Path $ahkFiles -DestinationPath "release/TaskbarHider-$tag-ahk.zip" -Force
+
+          # SHA256SUMS
+          Get-ChildItem release -File | ForEach-Object {
+            $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+            "$h  $($_.Name)"
+          } | Out-File -FilePath release/SHA256SUMS.txt -Encoding ascii
+
+          Get-ChildItem release | Format-Table Name, Length -AutoSize
+
+      - name: Create / update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/TaskbarHider-x64.exe
+            release/TaskbarHider-x86.exe
+            release/TaskbarHider-*-ahk.zip
+            release/SHA256SUMS.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## TaskbarHider ${{ github.ref_name }}
+
+            Two install options:
+
+            ### Native build (recommended)
+            - Download **`TaskbarHider-x64.exe`** (or `-x86.exe` on 32-bit systems).
+            - Run it. Right-click the tray icon for the exit menu.
+            - Emergency exit hotkey: `Ctrl+Alt+Shift+T`.
+
+            ### AutoHotkey v2 build
+            - Download **`TaskbarHider-${{ github.ref_name }}-ahk.zip`**, extract, run `install.bat`.
+            - Uses the signed AutoHotkey v2 interpreter — will not be flagged by Defender.
+
+            Verify downloads against `SHA256SUMS.txt`.
