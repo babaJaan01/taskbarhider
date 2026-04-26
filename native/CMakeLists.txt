@@ -32,11 +32,18 @@ target_compile_definitions(TaskbarHider PRIVATE
 if(MSVC)
     target_compile_options(TaskbarHider PRIVATE /W4 /permissive- /Zc:__cplusplus /utf-8)
     target_compile_options(TaskbarHider PRIVATE
-        $<$<CONFIG:Release>:/O1 /Oy /GL /GR- /EHs-c- /DNDEBUG /guard:cf>
+        $<$<CONFIG:Release>:/O1 /Oy /GL /GR- /DNDEBUG /guard:cf>
         $<$<CONFIG:Debug>:/Od /Zi /RTC1>
     )
     target_link_options(TaskbarHider PRIVATE
         $<$<CONFIG:Release>:/LTCG /OPT:REF /OPT:ICF /DYNAMICBASE /NXCOMPAT /GUARD:CF>
+    )
+
+    # Embed app.manifest via the MSBuild manifest pipeline. Avoids the
+    # CVT1100 duplicate-resource error you get when you also declare it in .rc.
+    target_link_options(TaskbarHider PRIVATE
+        "/MANIFEST:EMBED"
+        "/MANIFESTINPUT:${CMAKE_CURRENT_SOURCE_DIR}/src/app.manifest"
     )
 
     # Static CRT -> zero runtime dependencies, no redistributable needed.

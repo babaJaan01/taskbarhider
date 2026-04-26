@@ -8,7 +8,6 @@
 
 // Use the system's own shell tray icon so we don't need to ship a .ico file.
 // Replace with `IDI_APP_ICON ICON "app.ico"` + a real .ico if you want a custom icon.
-// (Left intentionally empty — we use LoadIcon(nullptr, IDI_APPLICATION) at runtime.)
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION     TASKBARHIDER_VERSION
@@ -43,5 +42,6 @@ BEGIN
     END
 END
 
-// Manifest: DPI-aware, modern visual styles, no admin required.
-CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
+// NOTE: The application manifest is fed to the linker via /MANIFESTINPUT:
+// (see CMakeLists.txt). Declaring it here as well would create a duplicate
+// MANIFEST resource and fail with CVT1100.
