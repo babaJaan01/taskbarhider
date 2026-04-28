@@ -98,6 +98,10 @@ bool ClassNameEquals(HWND hwnd, const wchar_t* name) {
     return wcscmp(buf, name) == 0;
 }
 
+bool IsUsableVisibleWindow(HWND hwnd) {
+    return hwnd && IsWindowVisible(hwnd) && !IsWindowCloaked(hwnd);
+}
+
 // --- taskbar handle cache ---------------------------------------------------
 
 void RefreshTaskbarHandles() {
@@ -200,15 +204,20 @@ const wchar_t* const kFlyoutClasses[] = {
 
 bool IsAnyFlyoutOpen() {
     for (const wchar_t* cls : kFlyoutClasses) {
-        if (FindWindowW(cls, nullptr) != nullptr) return true;
+        HWND hwnd = nullptr;
+        while ((hwnd = FindWindowExW(nullptr, hwnd, cls, nullptr)) != nullptr) {
+            if (IsUsableVisibleWindow(hwnd))
+                return true;
+        }
     }
 
     // Windows.UI.Core.CoreWindow is used by Start/Search/etc.
     HWND core = nullptr;
     while ((core = FindWindowExW(nullptr, core, L"Windows.UI.Core.CoreWindow", nullptr)) != nullptr) {
-        if (IsWindowCloaked(core)) continue;
+        if (!IsUsableVisibleWindow(core)) continue;
         wchar_t title[256] = {};
         GetWindowTextW(core, title, _countof(title));
+        if (title[0] == L'\0') continue;
         if (wcscmp(title, L"Cortana") == 0) continue;
         if (wcscmp(title, L"Search")  == 0) continue;
         return true;
