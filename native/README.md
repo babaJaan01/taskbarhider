@@ -1,7 +1,7 @@
 # TaskbarHider - native build
 
-Native Win32 C++ version of TaskbarHider. Same behavior as the original script,
-but packaged as a tiny standalone exe with no AutoHotkey dependency.
+Native Win32 C++ version of TaskbarHider. This is now the only supported build
+of the project.
 
 - Binary size: about 100 KB
 - Runtime memory: about 1 MB

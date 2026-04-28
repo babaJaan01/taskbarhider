@@ -13,7 +13,7 @@ dist/
 .idea/
 CMakeUserPresets.json
 
-# Compiled AHK (we do NOT ship this — it is the false-positive source)
+# Native release artifacts
 *.exe
 !native/build/**/*.exe
 

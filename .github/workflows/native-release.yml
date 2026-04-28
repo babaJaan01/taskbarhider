@@ -104,21 +104,11 @@ jobs:
 
       - name: Assemble release bundle
         run: |
-          $tag = "${{ github.ref_name }}"
           New-Item -ItemType Directory -Force -Path release | Out-Null
 
           # Native binaries
           Copy-Item artifacts/TaskbarHider-x64/TaskbarHider-x64.exe release/
           Copy-Item artifacts/TaskbarHider-x86/TaskbarHider-x86.exe release/
-
-          # Tier 1 AHK bundle
-          $ahkFiles = @(
-            'TaskbarHider.ahk', 'RestoreTaskbar.ahk',
-            'install.ps1', 'install.bat',
-            'uninstall.ps1', 'uninstall.bat',
-            'README.md', 'LICENSE'
-          )
-          Compress-Archive -Path $ahkFiles -DestinationPath "release/TaskbarHider-$tag-ahk.zip" -Force
 
           Copy-Item LICENSE release/LICENSE.txt -Force
 
@@ -136,7 +126,6 @@ jobs:
           files: |
             release/TaskbarHider-x64.exe
             release/TaskbarHider-x86.exe
-            release/TaskbarHider-*-ahk.zip
             release/LICENSE.txt
             release/SHA256SUMS.txt
           draft: false
@@ -150,11 +139,6 @@ jobs:
             ### Recommended download
             - **`TaskbarHider-x64.exe`** for almost every modern PC
             - **`TaskbarHider-x86.exe`** only for 32-bit Windows
-
-            ### Alternative install path
-            - **`TaskbarHider-${{ github.ref_name }}-ahk.zip`**
-            - Extract it and run `install.bat`
-            - Uses the signed AutoHotkey v2 interpreter as a fallback path
 
             ### Notes
             - Emergency exit hotkey: `Ctrl+Alt+Shift+T`

@@ -1,6 +1,6 @@
 // TaskbarHider — native Win32 port.
 //
-// Behavior (matches the original AutoHotkey v2 script):
+// Behavior:
 //   * No user windows visible  -> hide Shell_TrayWnd + Shell_SecondaryTrayWnd.
 //   * Mouse at the bottom edge  -> reveal the taskbar while hovering.
 //   * Any real user window open -> taskbar always shown.
