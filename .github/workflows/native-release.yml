@@ -113,7 +113,8 @@ jobs:
           Copy-Item LICENSE release/LICENSE.txt -Force
 
           # SHA256SUMS
-          Get-ChildItem release -File | ForEach-Object {
+          $releaseFiles = Get-ChildItem release -File
+          $releaseFiles | ForEach-Object {
             $h = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
             "$h  $($_.Name)"
           } | Out-File -FilePath release/SHA256SUMS.txt -Encoding ascii
