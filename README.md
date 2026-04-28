@@ -1,73 +1,89 @@
 # TaskbarHider
 
-Lightweight Windows 11 utility that automatically hides the taskbar when no windows are open — nice for clean wallpaper screenshots or just idling.
+Tiny Windows utility that hides the taskbar when your desktop is empty, then reveals it again when you open an app or move your mouse to the bottom edge.
 
-- No windows visible → taskbar hides (hover the bottom edge to reveal)
-- Any app window open → taskbar stays visible
+- No visible windows -> taskbar hides
+- Hover the bottom edge -> taskbar reveals
+- Open any normal app window -> taskbar stays visible
 - Multi-monitor support
-- ~3 MB RAM, near-0% CPU (event-driven via Windows shell hooks)
+- Native Win32 build: about 100 KB on disk, about 1 MB RAM, near-0% CPU at idle
 
-## Install (recommended)
+## Download
 
-This release **does not ship a compiled `.exe`** — it ships the raw AutoHotkey v2 script and an installer. See [Why no `.exe`?](#why-no-exe) below for why.
+Get the latest files from [Releases](https://github.com/babaJaan01/taskbarhider/releases).
 
-1. Download the latest `TaskbarHider-vX.Y.Z.zip` from [Releases](https://github.com/babaJaan01/taskbarhider/releases).
-2. Extract it anywhere.
-3. Double-click **`install.bat`**.
-   - If AutoHotkey v2 is missing, the installer will install it via `winget` automatically.
-   - The script is copied to `%LOCALAPPDATA%\TaskbarHider\TaskbarHider.ahk`.
-   - A Startup shortcut is created so it launches at login.
-   - It starts running immediately.
+### Recommended: native build
 
-That's it. The taskbar will start auto-hiding.
+- Download `TaskbarHider-x64.exe` on almost every modern PC.
+- Use `TaskbarHider-x86.exe` only on 32-bit Windows.
+- Double-click the exe to run it.
+- Right-click the tray icon to restore the taskbar or exit.
+- Emergency exit hotkey: `Ctrl+Alt+Shift+T`
 
-## Uninstall
+### Fallback: AutoHotkey build
 
-Double-click **`uninstall.bat`** from the extracted folder (or re-download and run it). It will:
+If you prefer a script-based install, download `TaskbarHider-vX.Y.Z-ahk.zip`, extract it, and run `install.bat`.
 
-- Stop the running instance and restore the taskbar.
-- Remove the Startup shortcut.
-- Delete `%LOCALAPPDATA%\TaskbarHider`.
+That installer:
+- installs AutoHotkey v2 with `winget` if needed
+- copies the script to `%LOCALAPPDATA%\TaskbarHider`
+- creates a Startup shortcut
+- launches it immediately
 
-## Emergency: my taskbar is stuck hidden
+## x64 vs x86
 
-- Press **`Ctrl+Alt+Shift+T`** anywhere — this force-exits TaskbarHider and restores the taskbar.
-- Or double-click **`RestoreTaskbar.ahk`** from the repo.
-- Or open Task Manager (`Ctrl+Shift+Esc`) → find `AutoHotkey64.exe` running `TaskbarHider.ahk` → End task. If the taskbar is still hidden, run `RestoreTaskbar.ahk`.
+- `x64` = 64-bit Windows. This is the right choice for almost everyone.
+- `x86` = 32-bit Windows. Only use this if your OS is actually 32-bit.
 
-## Why no `.exe`?
+If you are unsure, use `x64`.
 
-The earlier v1.0 release shipped `TaskbarHider.exe` compiled via `Ahk2Exe`. Microsoft Defender started flagging it as malware (false positive). This is a well-known, long-running issue with **all** compiled AutoHotkey binaries — malware authors frequently abuse AutoHotkey to build droppers, so Defender's heuristics aggressively flag any `.exe` that looks like "AHK interpreter + embedded script + window enumeration + ShowWindow calls." It's not specific to this project.
+## SmartScreen and Defender
 
-Fixing it for good requires one of:
+The native build is a normal Win32 executable and should not trigger Microsoft Defender malware detection.
 
-1. Distributing the raw `.ahk` + installer (what this release does). The official `AutoHotkey64.exe` interpreter is signed by AutoHotkey Foundation Limited and is already trusted by Defender.
-2. Rewriting the tool as a native Win32 binary and code-signing it. **This repo is doing this too** — see the [`native/`](./native) folder for an in-progress native C++ port that will ship as a signed single-file `.exe`.
+Windows SmartScreen may still show an "Unknown publisher" warning on first run because unsigned apps start with no reputation. That is expected for small new utilities and is separate from Defender malware flagging. Code signing fixes that later.
 
-Distributing an unsigned Ahk2Exe build is not worth fighting — even if you submit a false-positive report and get it un-flagged, the next build gets re-flagged when Defender's model updates.
+## Why there are two builds
 
-## Requirements
+Earlier versions shipped a compiled AutoHotkey exe built with `Ahk2Exe`. Microsoft Defender started flagging that exe as malware, which is a common false-positive pattern for compiled AutoHotkey apps.
 
-- Windows 10 (1809+) or Windows 11
-- AutoHotkey v2 (installed automatically by `install.bat` if missing)
+This repo now ships two safer options:
 
-## How it works
+- a native C++ Win32 build, which is the main product
+- a raw AutoHotkey v2 script plus installer, which avoids the Defender problem because it runs through the signed official AutoHotkey interpreter
 
-- Registers a shell hook window (`RegisterShellHookWindow`) to receive `HSHELL_WINDOWCREATED` / `DESTROYED` / `ACTIVATED` events — event-driven, no polling for window changes.
-- A 100 ms timer only runs hover-zone detection (needed because Windows does not send events for raw mouse motion near the screen edge).
-- Walks `WinGetList()` and filters out system shell windows, tool windows, cloaked (UWP background) windows, etc. to decide whether any "real" user window is visible.
-- Hides the taskbar via `ShowWindow(Shell_TrayWnd, SW_HIDE)` / restores it with `SW_SHOW`. Same for `Shell_SecondaryTrayWnd` on additional monitors.
-- Handles `WM_ENDSESSION` so the taskbar is always restored on logoff/shutdown.
+## Safety and privacy
 
-## Files
+TaskbarHider does not:
 
-| File | Purpose |
-| --- | --- |
-| `TaskbarHider.ahk` | The main script |
-| `RestoreTaskbar.ahk` | Emergency "force-show the taskbar" script |
-| `install.ps1` / `install.bat` | Installer (adds Startup shortcut, installs AHK v2 via winget if needed) |
-| `uninstall.ps1` / `uninstall.bat` | Uninstaller |
-| `native/` | Work-in-progress native C++ port (tiny signed `.exe`, no AHK required) |
+- send network traffic
+- collect telemetry
+- download code
+- touch credentials
+- inject into other processes
+- require administrator privileges
+
+It only watches normal shell/window state and shows or hides the Windows taskbar.
+
+## Emergency recovery
+
+If the taskbar ever gets stuck hidden:
+
+- press `Ctrl+Alt+Shift+T`
+- or run `RestoreTaskbar.ahk`
+- or end `TaskbarHider.exe` / `AutoHotkey64.exe` in Task Manager and then run `RestoreTaskbar.ahk`
+
+## Repo layout
+
+- `native/` - native Win32 source and build files
+- `TaskbarHider.ahk` - AutoHotkey fallback version
+- `RestoreTaskbar.ahk` - emergency taskbar restorer
+- `install.*` / `uninstall.*` - installer helpers for the AHK version
+- `.github/workflows/native-release.yml` - CI and release automation
+
+## Build from source
+
+See `native/README.md` for local native build instructions.
 
 ## License
 

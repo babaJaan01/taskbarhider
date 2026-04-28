@@ -33,9 +33,11 @@ constexpr UINT  kShellHookUpdateMsg  = WM_APP + 2;
 constexpr UINT_PTR kTimerIdMain      = 1;
 constexpr UINT_PTR kTimerIdRefresh   = 2;
 constexpr UINT_PTR kTimerIdDebounce  = 3;
+constexpr UINT_PTR kTimerIdHideDelay = 4;
 constexpr UINT  kMainTimerMs         = 100;
 constexpr UINT  kRefreshTimerMs      = 30000;
 constexpr UINT  kDebounceMs          = 30;
+constexpr UINT  kHideDelayMs         = 180;
 constexpr int   kHoverZonePx         = 5;
 
 constexpr int   kEmergencyHotkeyId   = 1;
@@ -56,6 +58,7 @@ size_t       g_secondaryCount   = 0;
 bool         g_taskbarHidden    = false;
 bool         g_lastWindowState  = true;
 bool         g_hoverRevealed    = false;
+bool         g_hidePending      = false;
 
 NOTIFYICONDATAW g_nid            = {};
 bool            g_trayAdded      = false;
@@ -78,6 +81,9 @@ void OnShellEvent(WPARAM wParam);
 void AddTrayIcon();
 void RemoveTrayIcon();
 void ShowTrayMenu();
+void ScheduleHideTaskbar();
+void CancelPendingHide();
+void ApplyDelayedHide();
 
 // --- utilities ---------------------------------------------------------------
 
@@ -315,14 +321,51 @@ void UpdateTaskbar() {
     g_lastWindowState = hasWindows;
 
     if (hasWindows) {
+        CancelPendingHide();
         g_taskbarHidden = false;
         g_hoverRevealed = false;
         ShowTaskbar();
     } else {
-        g_taskbarHidden = true;
-        g_hoverRevealed = false;
-        HideTaskbar();
+        ScheduleHideTaskbar();
     }
+}
+
+void ScheduleHideTaskbar() {
+    if (g_taskbarHidden || g_hidePending)
+        return;
+
+    g_hidePending = true;
+    SetTimer(g_hWnd, kTimerIdHideDelay, kHideDelayMs, nullptr);
+}
+
+void CancelPendingHide() {
+    if (!g_hidePending)
+        return;
+
+    KillTimer(g_hWnd, kTimerIdHideDelay);
+    g_hidePending = false;
+}
+
+void ApplyDelayedHide() {
+    CancelPendingHide();
+
+    if (HasVisibleWindows()) {
+        g_taskbarHidden = false;
+        g_hoverRevealed = false;
+        ShowTaskbar();
+        return;
+    }
+
+    if (IsMouseInTaskbarZone()) {
+        g_taskbarHidden = true;
+        g_hoverRevealed = true;
+        ShowTaskbar();
+        return;
+    }
+
+    g_taskbarHidden = true;
+    g_hoverRevealed = false;
+    HideTaskbar();
 }
 
 void MainLoop() {
@@ -443,6 +486,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             KillTimer(hWnd, kTimerIdDebounce);
             UpdateTaskbar();
             return 0;
+        case kTimerIdHideDelay:
+            ApplyDelayedHide();
+            return 0;
         }
         break;
 
@@ -489,6 +535,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case IDM_TRAY_SHOW_TASKBAR:
             RefreshTaskbarHandles();
             ShowTaskbar();
+            CancelPendingHide();
             g_taskbarHidden = false;
             g_hoverRevealed = false;
             return 0;
@@ -513,6 +560,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         KillTimer(hWnd, kTimerIdMain);
         KillTimer(hWnd, kTimerIdRefresh);
         KillTimer(hWnd, kTimerIdDebounce);
+        KillTimer(hWnd, kTimerIdHideDelay);
         UnregisterHotKey(hWnd, kEmergencyHotkeyId);
         if (g_shellHookRegistered) {
             DeregisterShellHookWindow(hWnd);

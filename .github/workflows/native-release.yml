@@ -1,4 +1,4 @@
-name: Native build & release
+name: Native Build and Release
 
 on:
   push:
@@ -14,10 +14,16 @@ on:
       - '.github/workflows/native-release.yml'
   workflow_dispatch:
 
+concurrency:
+  group: native-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build (${{ matrix.arch }})
     runs-on: windows-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -96,7 +102,7 @@ jobs:
       #     timestamp-rfc3161: http://timestamp.acs.microsoft.com
       #     timestamp-digest: SHA256
 
-      - name: Assemble release bundle (Tier 1 zip + native exes)
+      - name: Assemble release bundle
         run: |
           $tag = "${{ github.ref_name }}"
           New-Item -ItemType Directory -Force -Path release | Out-Null
@@ -110,9 +116,11 @@ jobs:
             'TaskbarHider.ahk', 'RestoreTaskbar.ahk',
             'install.ps1', 'install.bat',
             'uninstall.ps1', 'uninstall.bat',
-            'README.md'
+            'README.md', 'LICENSE'
           )
           Compress-Archive -Path $ahkFiles -DestinationPath "release/TaskbarHider-$tag-ahk.zip" -Force
+
+          Copy-Item LICENSE release/LICENSE.txt -Force
 
           # SHA256SUMS
           Get-ChildItem release -File | ForEach-Object {
@@ -129,6 +137,7 @@ jobs:
             release/TaskbarHider-x64.exe
             release/TaskbarHider-x86.exe
             release/TaskbarHider-*-ahk.zip
+            release/LICENSE.txt
             release/SHA256SUMS.txt
           draft: false
           prerelease: false
@@ -136,15 +145,18 @@ jobs:
           body: |
             ## TaskbarHider ${{ github.ref_name }}
 
-            Two install options:
+            Lightweight utility that hides the Windows taskbar when no normal app windows are visible.
 
-            ### Native build (recommended)
-            - Download **`TaskbarHider-x64.exe`** (or `-x86.exe` on 32-bit systems).
-            - Run it. Right-click the tray icon for the exit menu.
-            - Emergency exit hotkey: `Ctrl+Alt+Shift+T`.
+            ### Recommended download
+            - **`TaskbarHider-x64.exe`** for almost every modern PC
+            - **`TaskbarHider-x86.exe`** only for 32-bit Windows
 
-            ### AutoHotkey v2 build
-            - Download **`TaskbarHider-${{ github.ref_name }}-ahk.zip`**, extract, run `install.bat`.
-            - Uses the signed AutoHotkey v2 interpreter — will not be flagged by Defender.
+            ### Alternative install path
+            - **`TaskbarHider-${{ github.ref_name }}-ahk.zip`**
+            - Extract it and run `install.bat`
+            - Uses the signed AutoHotkey v2 interpreter as a fallback path
 
-            Verify downloads against `SHA256SUMS.txt`.
+            ### Notes
+            - Emergency exit hotkey: `Ctrl+Alt+Shift+T`
+            - Verify downloads with `SHA256SUMS.txt`
+            - Unsigned builds may show a SmartScreen reputation warning on first run
