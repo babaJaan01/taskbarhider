@@ -12,11 +12,18 @@ Tiny Windows utility that hides the taskbar when your desktop is empty, then rev
 
 Get the latest files from [Releases](https://github.com/babaJaan01/taskbarhider/releases).
 
-### Recommended: native build
+### Recommended: installer wizard
+
+- Download `TaskbarHider-Setup-x64.exe` on almost every modern PC.
+- Use `TaskbarHider-Setup-x86.exe` only on 32-bit Windows.
+- The setup wizard asks whether you want TaskbarHider to start when you sign in.
+- If you cancel setup, no changes are applied and the wizard will ask again next time you run it.
+
+### Portable: raw executable
 
 - Download `TaskbarHider-x64.exe` on almost every modern PC.
 - Use `TaskbarHider-x86.exe` only on 32-bit Windows.
-- Double-click the exe to run it.
+- Double-click to run without installation.
 - Right-click the tray icon to restore the taskbar or exit.
 - Emergency exit hotkey: `Ctrl+Alt+Shift+T`
 
@@ -62,6 +69,7 @@ If the taskbar ever gets stuck hidden:
 ## Repo layout
 
 - `native/` - native Win32 source and build files
+- `installer/` - Inno Setup script and installer docs
 - `.github/workflows/native-release.yml` - CI and release automation
 
 ## Build from source

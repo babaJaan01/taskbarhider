@@ -38,6 +38,10 @@ taskbar.
 For auto-start: press `Win+R`, type `shell:startup`, and drop a shortcut to
 `TaskbarHider.exe` in the folder that opens.
 
+For end users, the recommended path is the setup wizard release artifact
+(`TaskbarHider-Setup-x64.exe` / `TaskbarHider-Setup-x86.exe`) which can
+configure startup during install.
+
 ## Why this exists
 
 The old compiled AutoHotkey exe was being flagged by Microsoft Defender, which

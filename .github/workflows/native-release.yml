@@ -5,12 +5,14 @@ on:
     branches: [main, master]
     paths:
       - 'native/**'
+      - 'installer/**'
       - '.github/workflows/native-release.yml'
     tags:
       - 'v*'
   pull_request:
     paths:
       - 'native/**'
+      - 'installer/**'
       - '.github/workflows/native-release.yml'
   workflow_dispatch:
 
@@ -83,6 +85,24 @@ jobs:
         with:
           path: artifacts
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer executables
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Missing Inno Setup compiler: $iscc" }
+
+          & $iscc "installer\TaskbarHider.iss" `
+            "/DBuildArch=x64" `
+            "/DSourceExePath=$((Resolve-Path 'artifacts/TaskbarHider-x64/TaskbarHider-x64.exe').Path)" `
+            "/O$((Resolve-Path '.').Path)\release"
+
+          & $iscc "installer\TaskbarHider.iss" `
+            "/DBuildArch=x86" `
+            "/DSourceExePath=$((Resolve-Path 'artifacts/TaskbarHider-x86/TaskbarHider-x86.exe').Path)" `
+            "/O$((Resolve-Path '.').Path)\release"
+
       # OPTIONAL — code sign with Azure Trusted Signing. Uncomment and set
       # the four secrets below once you have a Trusted Signing account.
       #
@@ -106,7 +126,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
 
-          # Native binaries
+          # Portable native binaries
           Copy-Item artifacts/TaskbarHider-x64/TaskbarHider-x64.exe release/
           Copy-Item artifacts/TaskbarHider-x86/TaskbarHider-x86.exe release/
 
@@ -125,6 +145,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            release/TaskbarHider-Setup-x64.exe
+            release/TaskbarHider-Setup-x86.exe
             release/TaskbarHider-x64.exe
             release/TaskbarHider-x86.exe
             release/LICENSE.txt
@@ -138,6 +160,11 @@ jobs:
             Lightweight utility that hides the Windows taskbar when no normal app windows are visible.
 
             ### Recommended download
+            - **`TaskbarHider-Setup-x64.exe`** for almost every modern PC
+            - **`TaskbarHider-Setup-x86.exe`** for 32-bit Windows
+            - Setup wizard asks if TaskbarHider should start when you sign in
+
+            ### Portable download (advanced)
             - **`TaskbarHider-x64.exe`** for almost every modern PC
             - **`TaskbarHider-x86.exe`** only for 32-bit Windows
 
