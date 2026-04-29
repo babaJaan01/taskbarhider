@@ -1,5 +1,5 @@
 #define MyAppName "TaskbarHider"
-#define MyAppVersion "2.0"
+#define MyAppVersion "2.2.1"
 #define MyAppPublisher "Shayaan Tanveer"
 #define MyAppURL "https://github.com/babaJaan01/taskbarhider"
 
