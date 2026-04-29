@@ -126,10 +126,6 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
 
-          # Portable native binaries
-          Copy-Item artifacts/TaskbarHider-x64/TaskbarHider-x64.exe release/
-          Copy-Item artifacts/TaskbarHider-x86/TaskbarHider-x86.exe release/
-
           Copy-Item LICENSE release/LICENSE.txt -Force
 
           # SHA256SUMS
@@ -147,8 +143,6 @@ jobs:
           files: |
             release/TaskbarHider-Setup-x64.exe
             release/TaskbarHider-Setup-x86.exe
-            release/TaskbarHider-x64.exe
-            release/TaskbarHider-x86.exe
             release/LICENSE.txt
             release/SHA256SUMS.txt
           draft: false
@@ -163,10 +157,6 @@ jobs:
             - **`TaskbarHider-Setup-x64.exe`** for almost every modern PC
             - **`TaskbarHider-Setup-x86.exe`** for 32-bit Windows
             - Setup wizard asks if TaskbarHider should start when you sign in
-
-            ### Portable download (advanced)
-            - **`TaskbarHider-x64.exe`** for almost every modern PC
-            - **`TaskbarHider-x86.exe`** only for 32-bit Windows
 
             ### Notes
             - Emergency exit hotkey: `Ctrl+Alt+Shift+T`

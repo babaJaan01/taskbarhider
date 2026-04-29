@@ -12,20 +12,56 @@ Tiny Windows utility that hides the taskbar when your desktop is empty, then rev
 
 Get the latest files from [Releases](https://github.com/babaJaan01/taskbarhider/releases).
 
-### Recommended: installer wizard
+### Installer wizard (only supported download)
 
 - Download `TaskbarHider-Setup-x64.exe` on almost every modern PC.
 - Use `TaskbarHider-Setup-x86.exe` only on 32-bit Windows.
 - The setup wizard asks whether you want TaskbarHider to start when you sign in.
 - If you cancel setup, no changes are applied and the wizard will ask again next time you run it.
 
-### Portable: raw executable
+## Install
 
-- Download `TaskbarHider-x64.exe` on almost every modern PC.
-- Use `TaskbarHider-x86.exe` only on 32-bit Windows.
-- Double-click to run without installation.
-- Right-click the tray icon to restore the taskbar or exit.
-- Emergency exit hotkey: `Ctrl+Alt+Shift+T`
+1. Download and run the setup file from Releases:
+   - `TaskbarHider-Setup-x64.exe` (recommended)
+   - `TaskbarHider-Setup-x86.exe` (32-bit Windows only)
+2. Choose install folder (default is `%LocalAppData%\\Programs\\TaskbarHider`).
+3. Choose whether TaskbarHider should start when you sign in.
+4. Finish setup and launch.
+
+## Uninstall
+
+- Open **Settings -> Apps -> Installed apps**
+- Find **TaskbarHider**
+- Click **Uninstall**
+
+This removes the app and startup shortcut created by the installer.
+
+## Verify download integrity (SHA256SUMS)
+
+Each release includes a `SHA256SUMS.txt` file. It contains trusted SHA-256
+hashes for the installer files.
+
+Why this matters:
+- proves the file was not corrupted during download
+- helps detect tampering
+- lets you verify you got the exact file published in the release
+
+How to verify on Windows PowerShell:
+
+1. Download `SHA256SUMS.txt` and your installer (`TaskbarHider-Setup-x64.exe`).
+2. In the folder with those files, run:
+
+```powershell
+Get-FileHash .\TaskbarHider-Setup-x64.exe -Algorithm SHA256
+```
+
+3. Compare the `Hash` output with the matching line in `SHA256SUMS.txt`.
+   They must be identical.
+
+Can setup verify this automatically right now?
+- Not currently. Inno Setup does not verify against your release checksum file
+  by default before launch.
+- For now, checksum verification is a manual pre-install safety check.
 
 ## x64 vs x86
 
