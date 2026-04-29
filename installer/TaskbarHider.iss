@@ -1,5 +1,5 @@
 #define MyAppName "TaskbarHider"
-#define MyAppVersion "2.2.1"
+#define MyAppVersion "2.2.2"
 #define MyAppPublisher "Shayaan Tanveer"
 #define MyAppURL "https://github.com/babaJaan01/taskbarhider"
 
@@ -37,7 +37,7 @@ SetupLogging=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "startup"; Description: "Start TaskbarHider when I sign in"; Flags: unchecked
+Name: "startup"; Description: "Start TaskbarHider on startup"; Flags: unchecked
 
 [Files]
 Source: "{#SourceExePath}"; DestDir: "{app}"; DestName: "TaskbarHider.exe"; Flags: ignoreversion
