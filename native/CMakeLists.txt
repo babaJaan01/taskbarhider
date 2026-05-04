@@ -76,7 +76,7 @@ endif()
 
 target_link_libraries(TaskbarHider PRIVATE
     "${RUST_CORE_LIB}"
-    user32 shell32 dwmapi gdi32 advapi32
+    user32 shell32 dwmapi gdi32 advapi32 ntdll
 )
 
 set_target_properties(TaskbarHider PROPERTIES
