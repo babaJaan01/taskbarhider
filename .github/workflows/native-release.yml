@@ -32,14 +32,24 @@ jobs:
         include:
           - arch: x64
             cmake_arch: x64
+            rust_target: x86_64-pc-windows-msvc
           - arch: x86
             cmake_arch: Win32
+            rust_target: i686-pc-windows-msvc
     defaults:
       run:
         shell: pwsh
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Test Rust core
+        run: cargo test --manifest-path native/rust_core/Cargo.toml --target ${{ matrix.rust_target }} --release
 
       - name: Configure
         run: cmake -S native -B native/build -A ${{ matrix.cmake_arch }}
@@ -156,7 +166,7 @@ jobs:
             ### Recommended download
             - **`TaskbarHider-Setup-x64.exe`** for almost every modern PC
             - **`TaskbarHider-Setup-x86.exe`** for 32-bit Windows
-            - Setup wizard asks if TaskbarHider should start when you sign in
+            - Setup wizard asks if TaskbarHider should start on startup and whether app attention should reveal the taskbar
 
             ### Notes
             - Emergency exit hotkey: `Ctrl+Alt+Shift+T`

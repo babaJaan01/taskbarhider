@@ -20,6 +20,29 @@ add_executable(TaskbarHider WIN32
 
 target_include_directories(TaskbarHider PRIVATE src)
 
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(RUST_TARGET "x86_64-pc-windows-msvc")
+else()
+    set(RUST_TARGET "i686-pc-windows-msvc")
+endif()
+
+set(RUST_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rust_core")
+set(RUST_CORE_LIB "${RUST_CORE_DIR}/target/${RUST_TARGET}/release/taskbarhider_core.lib")
+
+add_custom_command(
+    OUTPUT "${RUST_CORE_LIB}"
+    COMMAND cargo build --manifest-path "${RUST_CORE_DIR}/Cargo.toml" --release --target "${RUST_TARGET}"
+    DEPENDS
+        "${RUST_CORE_DIR}/Cargo.toml"
+        "${RUST_CORE_DIR}/src/lib.rs"
+    WORKING_DIRECTORY "${RUST_CORE_DIR}"
+    COMMENT "Building Rust core (${RUST_TARGET})"
+    VERBATIM
+)
+
+add_custom_target(TaskbarHiderRustCore DEPENDS "${RUST_CORE_LIB}")
+add_dependencies(TaskbarHider TaskbarHiderRustCore)
+
 target_compile_definitions(TaskbarHider PRIVATE
     UNICODE
     _UNICODE
@@ -52,6 +75,7 @@ if(MSVC)
 endif()
 
 target_link_libraries(TaskbarHider PRIVATE
+    "${RUST_CORE_LIB}"
     user32 shell32 dwmapi gdi32 advapi32
 )
 

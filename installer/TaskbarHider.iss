@@ -1,5 +1,5 @@
 #define MyAppName "TaskbarHider"
-#define MyAppVersion "2.2.2"
+#define MyAppVersion "3.0"
 #define MyAppPublisher "Shayaan Tanveer"
 #define MyAppURL "https://github.com/babaJaan01/taskbarhider"
 
@@ -38,6 +38,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "startup"; Description: "Start TaskbarHider on startup"; Flags: unchecked
+Name: "attention"; Description: "Show taskbar when an app needs attention"; Flags: unchecked
 
 [Files]
 Source: "{#SourceExePath}"; DestDir: "{app}"; DestName: "TaskbarHider.exe"; Flags: ignoreversion
@@ -48,3 +49,20 @@ Name: "{autostartup}\TaskbarHider"; Filename: "{app}\TaskbarHider.exe"; Tasks: s
 
 [Run]
 Filename: "{app}\TaskbarHider.exe"; Description: "Launch TaskbarHider now"; Flags: nowait postinstall skipifsilent
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Lines: TArrayOfString;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    SetArrayLength(Lines, 1);
+    if WizardIsTaskSelected('attention') then
+      Lines[0] := 'show_on_app_attention = true'
+    else
+      Lines[0] := 'show_on_app_attention = false';
+
+    SaveStringsToFile(ExpandConstant('{app}\taskbarhider.toml'), Lines, False);
+  end;
+end;

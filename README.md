@@ -1,7 +1,11 @@
 # TaskbarHider
 
 TaskbarHider hides the Windows taskbar when no normal app windows are visible,
-and reveals it when you hover the bottom edge or open an app.
+and reveals it when you hover the bottom edge, open an app, or optionally when
+an app needs attention.
+
+It uses a C++ Win32 shell host with a Rust core for state-machine and rules
+logic.
 
 ## Download
 
@@ -14,8 +18,10 @@ Download from [Releases](https://github.com/babaJaan01/taskbarhider/releases):
 
 1. Run the setup file.
 2. Pick install folder (default: `%LocalAppData%\\Programs\\TaskbarHider`).
-3. Choose whether to start TaskbarHider when you sign in.
+3. Choose startup and app-attention options.
 4. Finish setup.
+
+Runtime config is stored beside the installed app as `taskbarhider.toml`.
 
 ## Uninstall
 

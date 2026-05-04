@@ -1,6 +1,7 @@
 # Build output
 native/build/
 native/out/
+native/rust_core/target/
 dist/
 
 # IDE / editor

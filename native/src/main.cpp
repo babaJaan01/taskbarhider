@@ -12,9 +12,12 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <dwmapi.h>
+#include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "resource.h"
+#include "rust_core.h"
 
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -41,6 +44,7 @@ constexpr UINT  kHideDelayMs         = 180;
 constexpr int   kHoverZonePx         = 5;
 
 constexpr int   kEmergencyHotkeyId   = 1;
+constexpr WPARAM kShellFlash         = 0x8006;
 
 // --- globals -----------------------------------------------------------------
 
@@ -55,10 +59,7 @@ constexpr size_t kMaxSecondary = 16;
 HWND         g_secondaryTaskbars[kMaxSecondary] = {};
 size_t       g_secondaryCount   = 0;
 
-bool         g_taskbarHidden    = false;
-bool         g_lastWindowState  = true;
-bool         g_hoverRevealed    = false;
-bool         g_hidePending      = false;
+ThCore*      g_core             = nullptr;
 
 NOTIFYICONDATAW g_nid            = {};
 bool            g_trayAdded      = false;
@@ -81,9 +82,8 @@ void OnShellEvent(WPARAM wParam);
 void AddTrayIcon();
 void RemoveTrayIcon();
 void ShowTrayMenu();
-void ScheduleHideTaskbar();
-void CancelPendingHide();
-void ApplyDelayedHide();
+void ApplyDecision(ThDecision decision);
+ThCoreConfig LoadRuntimeConfig();
 
 // --- utilities ---------------------------------------------------------------
 
@@ -106,6 +106,47 @@ bool ClassNameEquals(HWND hwnd, const wchar_t* name) {
 
 bool IsUsableVisibleWindow(HWND hwnd) {
     return hwnd && IsWindowVisible(hwnd) && !IsWindowCloaked(hwnd);
+}
+
+std::filesystem::path ConfigPath() {
+    wchar_t modulePath[MAX_PATH] = {};
+    GetModuleFileNameW(nullptr, modulePath, _countof(modulePath));
+    return std::filesystem::path(modulePath).parent_path() / L"taskbarhider.toml";
+}
+
+ThCoreConfig LoadRuntimeConfig() {
+    ThCoreConfig config{};
+
+    std::ifstream file(ConfigPath());
+    std::string line;
+    while (std::getline(file, line)) {
+        if (line.find("show_on_app_attention") != std::string::npos &&
+            line.find("true") != std::string::npos) {
+            config.show_on_app_attention = 1;
+        }
+    }
+
+    return config;
+}
+
+void ApplyDecision(ThDecision decision) {
+    if (decision.cancel_hide_delay)
+        KillTimer(g_hWnd, kTimerIdHideDelay);
+
+    if (decision.start_hide_delay)
+        SetTimer(g_hWnd, kTimerIdHideDelay, kHideDelayMs, nullptr);
+
+    switch (static_cast<ThAction>(decision.action)) {
+    case TH_ACTION_SHOW_TASKBAR:
+        ShowTaskbar();
+        break;
+    case TH_ACTION_HIDE_TASKBAR:
+        HideTaskbar();
+        break;
+    case TH_ACTION_NONE:
+    default:
+        break;
+    }
 }
 
 // --- taskbar handle cache ---------------------------------------------------
@@ -318,74 +359,13 @@ bool IsMouseInTaskbarZone() {
 
 void UpdateTaskbar() {
     const bool hasWindows = HasVisibleWindows();
-    g_lastWindowState = hasWindows;
-
-    if (hasWindows) {
-        CancelPendingHide();
-        g_taskbarHidden = false;
-        g_hoverRevealed = false;
-        ShowTaskbar();
-    } else {
-        ScheduleHideTaskbar();
-    }
-}
-
-void ScheduleHideTaskbar() {
-    if (g_taskbarHidden || g_hidePending)
-        return;
-
-    g_hidePending = true;
-    SetTimer(g_hWnd, kTimerIdHideDelay, kHideDelayMs, nullptr);
-}
-
-void CancelPendingHide() {
-    if (!g_hidePending)
-        return;
-
-    KillTimer(g_hWnd, kTimerIdHideDelay);
-    g_hidePending = false;
-}
-
-void ApplyDelayedHide() {
-    CancelPendingHide();
-
-    if (HasVisibleWindows()) {
-        g_taskbarHidden = false;
-        g_hoverRevealed = false;
-        ShowTaskbar();
-        return;
-    }
-
-    if (IsMouseInTaskbarZone()) {
-        g_taskbarHidden = true;
-        g_hoverRevealed = true;
-        ShowTaskbar();
-        return;
-    }
-
-    g_taskbarHidden = true;
-    g_hoverRevealed = false;
-    HideTaskbar();
+    ApplyDecision(th_core_on_visibility_update(g_core, hasWindows ? 1 : 0));
 }
 
 void MainLoop() {
     const bool currentState = HasVisibleWindows();
-    if (currentState != g_lastWindowState) {
-        g_lastWindowState = currentState;
-        UpdateTaskbar();
-        return;
-    }
-
-    if (!g_taskbarHidden) return;
-
     const bool mouseInZone = IsMouseInTaskbarZone();
-    if (mouseInZone && !g_hoverRevealed) {
-        ShowTaskbar();
-        g_hoverRevealed = true;
-    } else if (!mouseInZone && g_hoverRevealed) {
-        HideTaskbar();
-        g_hoverRevealed = false;
-    }
+    ApplyDecision(th_core_on_main_tick(g_core, currentState ? 1 : 0, mouseInZone ? 1 : 0));
 }
 
 void OnShellEvent(WPARAM wParam) {
@@ -397,6 +377,9 @@ void OnShellEvent(WPARAM wParam) {
         case HSHELL_RUDEAPPACTIVATED: // 0x8004
             // Debounce: if several events fire back-to-back, only update once.
             SetTimer(g_hWnd, kTimerIdDebounce, kDebounceMs, nullptr);
+            break;
+        case kShellFlash:
+            ApplyDecision(th_core_on_attention_event(g_core));
             break;
         default:
             break;
@@ -463,6 +446,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         RefreshTaskbarHandles();
         AddTrayIcon();
+        g_core = th_core_new(LoadRuntimeConfig());
 
         RegisterHotKey(hWnd, kEmergencyHotkeyId,
                        MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'T');
@@ -487,7 +471,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             UpdateTaskbar();
             return 0;
         case kTimerIdHideDelay:
-            ApplyDelayedHide();
+            ApplyDecision(th_core_on_hide_delay(
+                g_core,
+                HasVisibleWindows() ? 1 : 0,
+                IsMouseInTaskbarZone() ? 1 : 0));
             return 0;
         }
         break;
@@ -534,10 +521,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
         case IDM_TRAY_SHOW_TASKBAR:
             RefreshTaskbarHandles();
+            th_core_force_shown(g_core);
             ShowTaskbar();
-            CancelPendingHide();
-            g_taskbarHidden = false;
-            g_hoverRevealed = false;
             return 0;
         case IDM_TRAY_ABOUT:
             MessageBoxW(hWnd,
@@ -567,6 +552,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             g_shellHookRegistered = false;
         }
         RemoveTrayIcon();
+        th_core_free(g_core);
+        g_core = nullptr;
         ShowTaskbar();
         PostQuitMessage(0);
         return 0;

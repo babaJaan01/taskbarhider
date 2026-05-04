@@ -13,8 +13,10 @@ of the project.
 
 Prerequisites:
 - Visual Studio 2022 with "Desktop development with C++" workload
-  (or just the Build Tools + Windows SDK), OR
-- Any recent MSVC + CMake (>= 3.20)
+  (or just the Build Tools + Windows SDK)
+- Rust stable with the matching MSVC target (`x86_64-pc-windows-msvc` or
+  `i686-pc-windows-msvc`)
+- CMake >= 3.20
 
 From a **"x64 Native Tools Command Prompt for VS 2022"** (or a regular shell
 with CMake on `PATH`):
@@ -40,7 +42,7 @@ For auto-start: press `Win+R`, type `shell:startup`, and drop a shortcut to
 
 For end users, the recommended path is the setup wizard release artifact
 (`TaskbarHider-Setup-x64.exe` / `TaskbarHider-Setup-x86.exe`) which can
-configure startup during install.
+configure startup and app-attention behavior during install.
 
 ## Why this exists
 
@@ -69,13 +71,15 @@ binaries inherit Microsoft's trust.
 
 ## Architecture
 
-Most of the app lives in `src/main.cpp`.
+The Win32 host lives in `src/main.cpp`; the taskbar state machine and rule
+engine live in the Rust static library under `rust_core/`.
 
 - `wWinMain` sets up the hidden window, single-instance mutex, and message loop
 - `WndProc` handles shell events, timers, the tray icon, hotkeys, and cleanup
 - `HasVisibleWindows()` decides whether the desktop is "empty"
 - `IsAnyFlyoutOpen()` keeps the taskbar visible while tray/Start/search UI is open
 - `IsMouseInTaskbarZone()` handles hover-to-reveal
+- Rust core decides show/hide actions, hide-delay scheduling, and app-attention behavior
 - `ShowTaskbar()` / `HideTaskbar()` update the main and secondary taskbars
 
 ## Manual verification
@@ -88,3 +92,4 @@ Most of the app lives in `src/main.cpp`.
 6. Click tray icon → menu works. "Exit" restores taskbar and quits.
 7. Press `Ctrl+Alt+Shift+T` from another app → same as Exit.
 8. Plug/unplug an external monitor → secondary taskbar handled too.
+9. Toggle `show_on_app_attention` in `taskbarhider.toml` and verify app-attention behavior.
