@@ -2,8 +2,8 @@
 #include "resource.h"
 
 #ifndef TASKBARHIDER_VERSION
-#define TASKBARHIDER_VERSION        3,0,0,0
-#define TASKBARHIDER_VERSION_STR    "3.0.0.0"
+#define TASKBARHIDER_VERSION        3,0,1,0
+#define TASKBARHIDER_VERSION_STR    "3.0.1.0"
 #endif
 
 // Use the system's own shell tray icon so we don't need to ship a .ico file.

@@ -37,8 +37,8 @@ Run `TaskbarHider.exe`, then use the tray icon for Restore / About / Exit.
 `Ctrl+Alt+Shift+T` is a global emergency-exit hotkey that always restores the
 taskbar.
 
-For auto-start: press `Win+R`, type `shell:startup`, and drop a shortcut to
-`TaskbarHider.exe` in the folder that opens.
+For auto-start, set `start_on_startup = true` in `taskbarhider.toml`. The app
+reads config only when it starts and syncs the Startup-folder shortcut then.
 
 For end users, the recommended path is the setup wizard release artifact
 (`TaskbarHider-Setup-x64.exe` / `TaskbarHider-Setup-x86.exe`) which can
@@ -92,4 +92,5 @@ engine live in the Rust static library under `rust_core/`.
 6. Click tray icon → menu works. "Exit" restores taskbar and quits.
 7. Press `Ctrl+Alt+Shift+T` from another app → same as Exit.
 8. Plug/unplug an external monitor → secondary taskbar handled too.
-9. Toggle `show_on_app_attention` in `taskbarhider.toml` and verify app-attention behavior.
+9. Toggle `start_on_startup` in `taskbarhider.toml`, restart TaskbarHider, and verify the Startup-folder shortcut updates.
+10. Toggle `show_on_app_attention` in `taskbarhider.toml` and verify app-attention behavior.

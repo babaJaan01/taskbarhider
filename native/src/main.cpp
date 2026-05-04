@@ -12,6 +12,8 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <dwmapi.h>
+#include <shlobj.h>
+#include <objbase.h>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -22,6 +24,7 @@
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "ole32.lib")
 
 namespace {
 
@@ -66,6 +69,8 @@ bool            g_trayAdded      = false;
 
 // --- forward decls -----------------------------------------------------------
 
+struct AppConfig;
+
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void RefreshTaskbarHandles();
 void UpdateTaskbar();
@@ -83,7 +88,9 @@ void AddTrayIcon();
 void RemoveTrayIcon();
 void ShowTrayMenu();
 void ApplyDecision(ThDecision decision);
-ThCoreConfig LoadRuntimeConfig();
+AppConfig LoadRuntimeConfig();
+void ApplyRuntimeConfigAtStartup();
+void SyncStartupShortcut(bool startOnStartup);
 
 // --- utilities ---------------------------------------------------------------
 
@@ -108,25 +115,99 @@ bool IsUsableVisibleWindow(HWND hwnd) {
     return hwnd && IsWindowVisible(hwnd) && !IsWindowCloaked(hwnd);
 }
 
+struct AppConfig {
+    ThCoreConfig core{};
+    bool startOnStartup = false;
+    bool hasStartOnStartup = false;
+};
+
 std::filesystem::path ConfigPath() {
     wchar_t modulePath[MAX_PATH] = {};
     GetModuleFileNameW(nullptr, modulePath, _countof(modulePath));
     return std::filesystem::path(modulePath).parent_path() / L"taskbarhider.toml";
 }
 
-ThCoreConfig LoadRuntimeConfig() {
-    ThCoreConfig config{};
+std::filesystem::path ExePath() {
+    wchar_t modulePath[MAX_PATH] = {};
+    GetModuleFileNameW(nullptr, modulePath, _countof(modulePath));
+    return modulePath;
+}
+
+AppConfig LoadRuntimeConfig() {
+    AppConfig config{};
 
     std::ifstream file(ConfigPath());
     std::string line;
     while (std::getline(file, line)) {
         if (line.find("show_on_app_attention") != std::string::npos &&
             line.find("true") != std::string::npos) {
-            config.show_on_app_attention = 1;
+            config.core.show_on_app_attention = 1;
+        } else if (line.find("start_on_startup") != std::string::npos) {
+            config.hasStartOnStartup = true;
+            config.startOnStartup = line.find("true") != std::string::npos;
         }
     }
 
     return config;
+}
+
+std::filesystem::path StartupShortcutPath() {
+    PWSTR startupPath = nullptr;
+    if (FAILED(SHGetKnownFolderPath(FOLDERID_Startup, KF_FLAG_CREATE, nullptr, &startupPath)))
+        return {};
+
+    std::filesystem::path path(startupPath);
+    CoTaskMemFree(startupPath);
+    return path / L"TaskbarHider.lnk";
+}
+
+void CreateStartupShortcut(const std::filesystem::path& shortcutPath) {
+    IShellLinkW* shellLink = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_IShellLinkW, reinterpret_cast<void**>(&shellLink))))
+        return;
+
+    const std::filesystem::path exePath = ExePath();
+    shellLink->SetPath(exePath.c_str());
+    shellLink->SetWorkingDirectory(exePath.parent_path().c_str());
+    shellLink->SetDescription(L"Start TaskbarHider on startup");
+
+    IPersistFile* persistFile = nullptr;
+    if (SUCCEEDED(shellLink->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&persistFile)))) {
+        persistFile->Save(shortcutPath.c_str(), TRUE);
+        persistFile->Release();
+    }
+
+    shellLink->Release();
+}
+
+void SyncStartupShortcut(bool startOnStartup) {
+    const std::filesystem::path shortcutPath = StartupShortcutPath();
+    if (shortcutPath.empty())
+        return;
+
+    if (startOnStartup) {
+        const HRESULT coInit = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+        if (SUCCEEDED(coInit) || coInit == RPC_E_CHANGED_MODE)
+            CreateStartupShortcut(shortcutPath);
+        if (SUCCEEDED(coInit))
+            CoUninitialize();
+    } else {
+        std::error_code ignored;
+        std::filesystem::remove(shortcutPath, ignored);
+    }
+}
+
+void ApplyRuntimeConfigAtStartup() {
+    AppConfig config = LoadRuntimeConfig();
+    const std::filesystem::path shortcutPath = StartupShortcutPath();
+
+    if (!config.hasStartOnStartup) {
+        config.startOnStartup = !shortcutPath.empty() && std::filesystem::exists(shortcutPath);
+    }
+
+    SyncStartupShortcut(config.startOnStartup);
+    g_core = th_core_new(config.core);
 }
 
 void ApplyDecision(ThDecision decision) {
@@ -446,7 +527,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         RefreshTaskbarHandles();
         AddTrayIcon();
-        g_core = th_core_new(LoadRuntimeConfig());
+        ApplyRuntimeConfigAtStartup();
 
         RegisterHotKey(hWnd, kEmergencyHotkeyId,
                        MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'T');

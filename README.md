@@ -21,7 +21,18 @@ Download from [Releases](https://github.com/babaJaan01/taskbarhider/releases):
 3. Choose startup and app-attention options.
 4. Finish setup.
 
-Runtime config is stored beside the installed app as `taskbarhider.toml`.
+Runtime config is stored beside the installed app as `taskbarhider.toml`:
+
+```toml
+# Changes apply the next time TaskbarHider starts.
+# If startup is enabled, that means the next Windows sign-in or reboot.
+start_on_startup = true
+
+# Show the taskbar when an app requests attention.
+show_on_app_attention = true
+```
+
+TaskbarHider reads this file only when it starts, keeping idle overhead low.
 
 ## Uninstall
 

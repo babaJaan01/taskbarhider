@@ -4,7 +4,8 @@ TaskbarHider uses Inno Setup for end-user installation.
 
 The installer:
 - installs to `%LocalAppData%\Programs\TaskbarHider`
-- asks whether startup should be enabled (`Start TaskbarHider when I sign in`)
+- asks whether startup should be enabled (`Start TaskbarHider on startup`)
+- writes `taskbarhider.toml` with startup and app-attention settings
 - launches TaskbarHider after install (unless silent mode)
 
 ## Build locally
@@ -27,6 +28,7 @@ For x86, build the 32-bit native exe and use `/DBuildArch=x86`.
 
 ## Startup behavior
 
-- Checked: installer creates `%AppData%\Microsoft\Windows\Start Menu\Programs\Startup\TaskbarHider.lnk`
-- Unchecked: no startup shortcut is created
+- Checked: installer writes `start_on_startup = true` and creates the startup shortcut
+- Unchecked: installer writes `start_on_startup = false`
+- If `start_on_startup` is edited later, TaskbarHider syncs the shortcut the next time it starts
 - Installer closed/cancelled: no changes applied, user will be asked again next installer run

@@ -1,5 +1,5 @@
 #define MyAppName "TaskbarHider"
-#define MyAppVersion "3.0"
+#define MyAppVersion "3.0.1"
 #define MyAppPublisher "Shayaan Tanveer"
 #define MyAppURL "https://github.com/babaJaan01/taskbarhider"
 
@@ -57,11 +57,20 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
-    SetArrayLength(Lines, 1);
-    if WizardIsTaskSelected('attention') then
-      Lines[0] := 'show_on_app_attention = true'
+    SetArrayLength(Lines, 6);
+    Lines[0] := '# Changes apply the next time TaskbarHider starts.';
+    Lines[1] := '# If startup is enabled, that means the next Windows sign-in or reboot.';
+    if WizardIsTaskSelected('startup') then
+      Lines[2] := 'start_on_startup = true'
     else
-      Lines[0] := 'show_on_app_attention = false';
+      Lines[2] := 'start_on_startup = false';
+
+    Lines[3] := '';
+    Lines[4] := '# Show the taskbar when an app requests attention.';
+    if WizardIsTaskSelected('attention') then
+      Lines[5] := 'show_on_app_attention = true'
+    else
+      Lines[5] := 'show_on_app_attention = false';
 
     SaveStringsToFile(ExpandConstant('{app}\taskbarhider.toml'), Lines, False);
   end;
